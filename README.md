@@ -2,6 +2,10 @@
 
 A Claude Code skill for designing group sequential clinical trials for survival endpoints (OS, PFS, DFS) with interim analyses, spending functions, multiplicity, and event/enrollment prediction.
 
+## Video Demo
+
+https://drive.google.com/file/d/1O9-SCJEoXGJv6J3YXuZZ1eiVB4Jk6Gao/view
+
 ## What It Does
 
 - Collects design inputs through a structured Q&A
@@ -51,8 +55,10 @@ group_sequential_design/
 ├── SKILL.md            # Main skill instructions and Q&A workflow
 ├── reference.md        # Design guidance, rules, failure modes
 ├── examples.md         # R code examples by design pattern
+├── post_design.md      # IA timing checks and verification procedure
 ├── README.md           # This file
-└── references/         # Bundled PDFs (gsDesign, lrstat, eventPred docs, protocol examples)
+├── LICENSE
+
 ```
 
 ## Output

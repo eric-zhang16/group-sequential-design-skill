@@ -323,6 +323,18 @@ Rationale:
 - **Epsilon to PFS-ITT (H2):** Prioritizes locking in both co-primary endpoints in ITT first (OS-ITT already positive, so boosting PFS-ITT claims full ITT success).
 Do not assume one over the other — present both rationales and let the user decide.
 
+### Transition Matrix Validation (mandatory for step-down designs)
+
+The R design script **must** call `validate_transition_matrix()` immediately after defining the transition matrix. This function programmatically checks Rule 3 — it catches any transition that routes alpha back to a hypothesis that must already be rejected. See `examples.md` → "Transition Matrix Validation" for the implementation.
+
+The function takes two inputs:
+1. The transition matrix (rows = from, cols = to)
+2. A named list of gate prerequisites for each hypothesis — which hypotheses must be rejected for it to be testable
+
+If any violation is found, the script must **stop with an error**, not just warn. This prevents the mistake from propagating into boundaries, the JSON, or the report.
+
+**When to skip:** Alpha-split designs have no gating, so all transitions are valid. Only enforce for step-down designs.
+
 ### Event Derivation from Prevalence
 
 For nested populations, subgroup events are a fraction of overall events based on prevalence:
@@ -411,6 +423,7 @@ Use flat numbering (1, 2, 3...) for sections. Use unnumbered subsection headings
    - **Enrollment duration**: Is enrollment a bottleneck? Would faster enrollment shift milestones meaningfully?
    - **Alpha reallocation impact**: How much does the cascade benefit the secondary endpoint?
    - **Do NOT suggest "later IA to improve OS IF"** when the IA is triggered by a different endpoint (e.g., PFS). The OS IF at the IA is a derived quantity — moving a PFS-triggered IA later doesn't meaningfully improve OS analysis, it just delays the PFS readout. This suggestion only makes sense when the IA is OS-triggered and the OS IF at that IA is a design choice.
+   - **Do NOT report internal algorithmic artifacts as limitations.** Values like `estimate_min_N` (the rough N heuristic from Phase A) are intermediate computational steps, not design properties. If the final verified design meets all power targets, the fact that a rough estimate exceeded the feasibility cap is irrelevant — it just means the estimate was conservative. Only flag genuine weaknesses of the final, verified design (borderline power, long study duration, stringent IA boundaries, etc.).
    - **IA-before-enrollment**: Already flagged in the IA timing check, but note it here too if it applies
    - **Efficacy boundary stringency at IA**: Use these thresholds to characterize IA boundaries:
      - HR at boundary < 0.70 OR cumulative IA power < 50% → **stringent** (hard to cross, requires strong early signal)
@@ -480,6 +493,13 @@ The R script saves all design results to `gsd_results.json`. Key fields the Pyth
 - PFS boundaries: `pfs_z_upper`, `pfs_p_upper`, `pfs_hr_upper`, `pfs_info_frac`, `pfs_N`, `pfs_cum_cross_h1`, `pfs_cum_cross_h0`, `pfs_power`, `pfs_power_full`
 - OS boundaries: `os_z_upper`, `os_z_lower`, `os_p_upper`, `os_hr_upper`, `os_hr_lower`, `os_info_frac`, `os_N`, `os_cum_cross_h1`, `os_cum_cross_h0`, `os_power`, `os_power_full`
 
+- Sensitivity table: `sensitivity_table` — array of objects, each row with `K`, `N`, `events_ia`, `events_fa`, `enroll_mo`, `ia_mo`, `fa_mo`, `study_mo`, `min_fu_mo`, `ia_fa_gap_mo`, `power_pct`
+- Verification: `verification` — object with `ph_power_simulated`, `ph_alpha_simulated`, `ph_overall_pass`, and optionally `nph_power_simulated`, `nph_alpha_simulated`, `nph_overall_pass`
+- Timing checks: `timing_checks` — object with `min_followup_met`, `min_followup_actual`, `min_gap_pairs`, `all_constraints_met` (see Phase C above)
+- Alpha comparison (when applicable): `alpha_comparison` — array of objects, each with `config`, `alpha_pfs`, `alpha_os`, `pfs_power`, `os_power`, `ia_mo`, `fa_mo`, `study_mo`
+
+**JSON R-to-Python gotcha: named vectors become arrays.** R's `toJSON()` converts named vectors (e.g., `c(H1=0, H2=1, H3=0, H4=0)`) to JSON arrays `[0, 1, 0, 0]`, losing the names. In the Python report script, access these by position index (e.g., `tm['H1'][1]` for the H2 weight), not by name (e.g., `tm['H1']['H2']` will fail). Similarly, `fromJSON()` in R converts JSON lists-of-objects to data frames — access with `$column[row]` (e.g., `res$populations$prevalence[1]`), not `[[1]]$prevalence`. Always test JSON round-trip access patterns before building the report script.
+
 ---
 
 ## IA Timing Constraints
@@ -527,6 +547,31 @@ These are two distinct concepts — do not conflate them in the design report or
 
 **When a constraint other than the triggering endpoint's IF is binding:**
 The actual event count at the analysis will exceed what the IF target alone would require. Report this clearly — e.g., "IA is triggered by 609 PFS events. This exceeds the 80% IF target (559 events) because the minimum follow-up constraint is binding."
+
+---
+
+## Handling Over-Powered Hypotheses
+
+When a hypothesis has power substantially above the target (e.g., >95% vs 90% target), there are two options:
+
+- **A) Increase assigned alpha** — More alpha → fewer events needed for the same power target. The extra alpha must come from another hypothesis. Best when the hypothesis is close to the power target and you need a modest reduction in events. Trade-off: the donor hypothesis gets less alpha.
+
+- **B) Reduce target events (accept derived power)** — Don't target 90% power for this hypothesis. Let the analysis timing be driven by other hypotheses, and accept whatever power results from the available events. Best when the hypothesis has large excess power (e.g., 96%+) and the event count is driven by a shared timeline.
+
+The choice depends on how much excess power exists:
+- **Close to 90% (e.g., 91–93%)**: Option A is safer
+- **Well above 90% (e.g., 95%+)**: Option B is cleaner
+- **Both can be combined**: increase alpha modestly AND accept derived power
+
+**Always produce a comparison table when suggesting alpha reallocation.** Don't just say "consider moving alpha from PFS to OS" — show the quantitative impact at fixed N. The table should include both the current and proposed alpha splits, with resulting power for each endpoint, IA timing, FA timing, and study duration. This lets the user see the concrete trade-off rather than guessing.
+
+Example format (store as `"alpha_comparison"` in `gsd_results.json`):
+```
+| Config    | α_PFS  | α_OS   | PFS Power | OS Power | IA(mo) | FA(mo) | Study(mo) |
+|-----------|--------|--------|-----------|----------|--------|--------|-----------|
+| Current   | 0.005  | 0.020  | 97.5%     | 90.0%    | 47.0   | 57.2   | 57.2      |
+| Proposed  | 0.002  | 0.023  | 93.1%     | 91.8%    | 47.0   | 55.8   | 55.8      |
+```
 
 ---
 
@@ -578,6 +623,13 @@ For 14+ hypotheses, place labels at 30% or 70% along arrows instead of 50% midpo
 ### gsSurv() vs gsDesign(): when to use which
 `gsSurv()` computes events/sample size from survival assumptions. `gsDesign()` with `n.I` when events are already known.
 
+### Schoenfeld vs nSurv with piecewise control hazards
+When the control hazard is piecewise (e.g., `lambdaC = c(log(2)/4, log(2)/8), S = 3`) but the HR is constant (PH design), `nSurv()` can massively overestimate required events — e.g., 782 vs Schoenfeld's 477 for alpha=0.001, HR=0.67. The Lachin-Foulkes formula inside `nSurv()` interacts poorly with piecewise hazard specifications, producing inflated event counts.
+
+**Why Schoenfeld is valid here:** With constant HR, the proportion of events from each arm is `1/(1+HR)` — invariant to the baseline hazard level. So the information per event is the same regardless of whether the control hazard is high (early period) or low (later period). The Schoenfeld approximation of D/4 variance per event holds.
+
+**Fix:** For piecewise control hazard with constant HR, use the Schoenfeld formula `events = 4 × (z_α + z_β)² / log(HR)²` for required events. Verify with simulation. Reserve nSurv/Lachin-Foulkes for scenarios where the HR or allocation ratio varies over time.
+
 ### Do NOT use nSurv()/gsSurv() to size multi-population designs
 `nSurv()` solves for enrollment duration to achieve target power, but it couples enrollment and events in ways that can oversize the design — especially for subpopulations where the effective enrollment rate is `prevalence × gamma`. The Lachin-Foulkes formula inside `nSurv()` may return substantially more events than the Schoenfeld approximation (e.g., 422 vs 324) depending on the follow-up/median ratio. **Fix**: For multi-population designs, compute required events analytically using the Schoenfeld formula `events = 4 × (z_α + z_β)² / log(HR)²`, then size enrollment to support those events. Use `gsDesign()` with pre-specified events for boundary computation.
 
@@ -598,13 +650,104 @@ This is counterintuitive because one might expect more patients to generate prop
 
 **When this occurs, run an N sensitivity analysis** exploring N values centered around the user's stated feasibility range (not from the computed minimum). Present a table showing how OS IF, IA timing, FA timing, and study duration change with N so the user can make an informed choice.
 
+**Short-survival amplification**: In aggressive diseases (median OS 8–10 months), the effect is even more dramatic because most OS events occur in the first wave of enrolled patients. Example from 2L SCLC: +17% patients (520→610) cut FA by 27% (47.8→35.0 months). Always flag N-increase as the primary lever when FA timing is a concern in short-survival diseases — the user may accept slightly exceeding their feasibility limit when the timing improvement is large.
+
+### N-First Design Algorithm
+
+**N is a top-level design parameter.** All design results (IA timing, FA timing, events, power) depend on N. The algorithm has three phases.
+
+**Why not let `gsSurv()` determine N?** `gsSurv()` requires an arbitrary `minfup` or `T` to anchor the enrollment solution. Different values give different N, silently baking in a sample size that may not match the user's intent. The N-first approach avoids this by making N an explicit choice.
+
+**Phase A — Determine starting N:**
+
+1. Compute required events per hypothesis via Schoenfeld formula: `events = 4 × (z_α + z_β)² / log(HR)²`
+2. Estimate minimum N for each hypothesis:
+   ```
+   # Average event probability per patient at a given median follow-up
+   avg_lambda <- (lambdaC + lambdaC * hr) / 2
+   avg_event_prob <- avg_lambda / (avg_lambda + eta) * (1 - exp(-(avg_lambda + eta) * median_followup))
+   N_min_h <- events_h / avg_event_prob / prevalence_h
+   N_min <- max(N_min_h across hypotheses)  # bottleneck hypothesis
+   ```
+   Use `median_followup ≈ study_duration / 2` as a rough estimate (refine later). See `examples.md` → `estimate_min_N()` for the helper function.
+3. Pick starting N from user's feasibility range (Q13b), close to N_min. If N_min falls outside the range, flag it.
+4. Derive R from enrollment ramp: given rates `gamma = c(g1, g2, g3)` and period durations `R = c(d1, d2, K)`, solve `K = ceiling((N - g1*d1 - g2*d2) / g3)`. Actual N = sum(gamma × R).
+
+**Multi-population event derivation (Phase A, subgroup designs):**
+
+For multi-population designs (Pattern 5, 5+7), do NOT use `nSurv()` or `gsSurv()` to derive subgroup events or N — they treat the subgroup as an independent trial and can oversize the design. Instead:
+
+1. Compute required events per hypothesis via Schoenfeld: `events_h = 4 × (z_α + z_β)² / log(HR)²`
+2. For multi-look hypotheses, inflate by GSD spending factor: `events_FA = events_h × gsDesign(k, alpha, beta, sfu)$n.I[k] / gsDesign(k=1, alpha, beta)$n.I[1]`
+3. Compute per-patient event probability using `compute_event_prob()` (see `examples.md`), which integrates over the enrollment distribution properly (not a crude median-followup approximation)
+4. Derive N: `N_sub = events_FA / event_prob`, then `N_total = N_sub / prevalence`
+5. Take max across hypotheses to find the bottleneck
+
+After N is fixed, use `calc_expected_events()` for all event computations at specific calendar times, and `gsDesign()` (not `gsSurv()`) with `n.I = c(events_IA, events_FA)` for boundaries. The subgroup's events at the IA and FA are derived from `calc_expected_events()` using `gamma_vec * prevalence` as the subgroup enrollment rates.
+
+**Phase B — Design at fixed N:**
+
+All calculations use the fixed R/N. Use `gsSurv()` ONLY for boundary computation (with fixed R, `minfup=NULL, T=NULL`), NOT for enrollment sizing.
+
+1. Find IA time (event-driven, e.g., PFS-triggered)
+2. Compute all endpoint events at IA via `calc_expected_events()`
+3. Derive OS IF at IA
+4. Design OS boundaries: `gsSurv(gamma_sub, R_fixed, minfup=NULL, T=NULL)` — this computes required OS events and boundaries, using the fixed enrollment
+5. Find FA time when OS reaches required events
+6. Recompute all cross-endpoint events at final IA and FA times
+7. Compute all boundaries
+
+**Phase C — Evaluate and adjust N:**
+
+After Phase B, check requirements:
+- Power ≥ target for all lead hypotheses?
+- FA timing acceptable?
+- OS IF at IA reasonable (<85%)?
+- N within user's feasibility range?
+
+If any requirement fails, present N adjustment as an option alongside other levers (alpha reallocation, relaxed power target, faster enrollment). When running an N sensitivity analysis, iterate over K (last enrollment period duration) to produce achievable N values consistent with the enrollment ramp. Re-run Phase B with the new N.
+
+**Soft N constraint — prefer slightly exceeding N for better timing:** When the optimal design slightly exceeds the N constraint (by <5%), present it as the recommended option alongside the constrained design, showing the timing/gap improvement gained by the extra patients. Example: if N_max=450 and N=460 cuts study duration by 8 months and brings the IA-FA gap from 28 months to 16 months, recommend N=460 with clear trade-off explanation. A small feasibility stretch for substantially better operational timing is almost always a good trade-off. Present both options in the sensitivity table so the user can decide.
+
+**Reducing N as a lever for short inter-analysis gaps:** When events accrue faster than the minimum gap allows (common in short-survival diseases with median OS 4-8 months), **reducing N** is a counter-intuitive but effective lever. Fewer patients → slower event accrual → wider calendar-time gaps between IF milestones. The trade-off is lower power or a different IF schedule. Present a sensitivity table showing how reducing N widens the gaps — the user may prefer 85% power with operationally feasible 6-month gaps over 90% power with 2-month gaps that cannot be executed in practice.
+
+**Timing constraint checks — required in `gsd_results.json`:** Always include a `timing_checks` object:
+```json
+"timing_checks": {
+  "min_followup_required": 6,
+  "min_followup_actual": 6.0,
+  "min_followup_met": true,
+  "min_gap_required": 6,
+  "min_gap_pairs": [
+    {"pair": "IA-FA", "gap": 6.3, "met": true}
+  ],
+  "all_constraints_met": true,
+  "violations_flagged": false
+}
+```
+If any constraint is violated, set `all_constraints_met: false` and `violations_flagged: true`, and explain in the design summary which constraints are violated and why (e.g., "IA1-IA2 gap is 2.9 months — events accrue too fast for 6-month gap at this N").
+
 ### Beta spending futility and sample size (test.type=3 vs test.type=4)
 **Binding futility (test.type=3):** Beta spending inflates the required events because the design accounts for trials that stop early for futility under H1, losing power. The more aggressive the futility (less negative `sflpar`), the larger the inflation:
 - `sflpar=-2`: ~6% more events than no-futility design
 - `sflpar=-6`: ~1% more events
 - `sflpar=-20`: effectively zero inflation
 
-**Non-binding futility (test.type=4):** No event inflation regardless of spending function or gamma. `gsSurv()` computes events and power **ignoring the futility boundary entirely** — it assumes the trial always continues. The beta spending function only determines where the futility boundary is placed, not the sample size. The required events match a `test.type=1` (efficacy-only) design exactly.
+**Non-binding futility (test.type=4):** Despite the name "non-binding," `gsDesign` **does** inflate events for test.type=4. The key is that "non-binding" is asymmetric — it means different things for alpha vs power:
+
+- **Type I error (alpha):** Computed as if futility bounds don't exist (truly non-binding). Efficacy boundaries are identical to test.type=1. Actual alpha is slightly below nominal (e.g., 0.0239 vs 0.025) because some H0 trials would stop for futility and never reach later efficacy bounds.
+- **Power (beta):** Computed as if futility bounds ARE binding. Under H1, trials that cross the futility bound are "absorbed" — they lose the chance to cross efficacy at later looks. `gsDesign` inflates events to compensate, ensuring target power is met even with futility stopping under H1.
+
+This is a deliberate design choice in the `gsDesign` package (see `gsDType4ss()` in the source code). The rationale: even though futility is advisory, DMCs often follow the recommendation and stop. Beta spending ensures the trial maintains target power even if futility stopping occurs. If the trial ignores futility entirely (truly non-binding), actual power exceeds the target — the design is conservative on power.
+
+The inflation depends on beta spending aggressiveness:
+- `sflpar=-20`: ~0.5% more events than test.type=1 (nearly zero)
+- `sflpar=-4`: ~3% more events
+- `sflpar=-2`: ~5% more events
+
+**Implication for verification:** `lrsim()` must use `futilityBounds = rep(-6, k-1)` to disable futility in both H0 and H1 simulations. This matches the non-binding alpha assumption. The simulated power will match the analytical power from `gsDesign`, which already accounts for the beta-spending inflation internally. Including actual futility bounds in `lrsim()` would double-count the penalty and produce lower "operational power" that doesn't match the analytical value.
+
+**Implication for reporting:** When presenting the design, explain that the non-binding futility boundary does not inflate the type I error but does modestly inflate the required events (to maintain power if futility stopping occurs). The actual type I error is slightly below nominal alpha — this is conservative and acceptable to regulators.
 
 ### nSurv() dimension error at arbitrary calendar times
 `nSurv()` crashes with `"attempt to set 'rownames' on an object with no dimensions"` when called with `T < sum(R)` (calendar time during enrollment). It requires `T = sum(R) + minfup` exactly. **Fix**: Use the `calc_expected_events()` analytical helper (see `examples.md`) which works at any calendar time.
@@ -740,6 +883,25 @@ When a user specifies non-proportional hazards (piecewise control hazard and/or 
    - Average HR at each analysis (the effective HR the log-rank test sees)
    - Power at each analysis using the PH boundaries
 
+### What is AHR (Average Hazard Ratio)?
+
+The AHR is the **effective HR that the log-rank test statistic reflects at a given analysis time** under non-proportional hazards. It is a weighted geometric mean of the piecewise HRs:
+
+```
+AHR(t) = exp( sum[ log(HR_j) × d_j(t) ] / D(t) )
+       = product( HR_j ^ (d_j(t) / D(t)) )
+```
+
+where `HR_j` is the hazard ratio in period j, `d_j(t)` is the expected events in period j by calendar time t, and `D(t)` is total expected events. Periods with more events get more weight.
+
+The AHR connects NPH assumptions to standard power formulas: `E[Z] ≈ -log(AHR) × sqrt(D/4)`. This means you can plug the AHR into Schoenfeld or `gs_power_npe()` as if it were a constant HR.
+
+**Key properties:**
+- Under PH (constant HR), AHR = HR at all times
+- Under delayed effect (HR=1 early, HR<1 later), AHR starts near 1 and decreases over time
+- High early control hazard amplifies the weight of the HR=1 period, pulling AHR toward 1
+- Computed in R via `gsDesign2::ahr(total_duration=t)` or `gsDesign2::expected_time(target_event=D)`
+
 ### Why this approach works
 
 The key insight: **boundaries and event counts from the PH design remain valid under NPH.** Alpha spending boundaries depend only on the information fraction (ratio of events at IA to events at FA) and the spending function — not on the underlying hazard model. If the trial targets 395 OS events at the IA and 478 at the FA, the same Z-boundaries and p-value thresholds apply regardless of whether events came from a constant or piecewise hazard distribution.
@@ -874,6 +1036,40 @@ Verify against analyticals:
 - Simulated type I error (H0) within ±0.5 pp of alpha
 
 Include both PH and NPH results in the verification log.
+
+### Adding Looks for NPH Robustness
+
+When NPH evaluation reveals low power for an endpoint (e.g., PFS power drops from 90% to 54% due to a delayed treatment effect), **adding an additional analysis for that endpoint** can substantially improve NPH robustness. This is distinct from the traditional reason for adding interims (early stopping) — here the goal is to give the endpoint a second chance at a later timepoint where the AHR has improved.
+
+**Why it works:** Under NPH with delayed effect (HR=1 early, HR=0.65 later), the AHR improves over time as more events accumulate in the post-delay period. A second look at a later timepoint sees a better AHR and has more events, both of which increase power. With OBF-like spending, most alpha is reserved for the later look, providing a meaningful shot at rejection.
+
+**Example:** PFS tested only at IA1 (30 mo) → 54% NPH power. Add PFS testing at IA2 (40 mo, OS-triggered) → 72% NPH power (+18 pp). The second look adds ~80 PFS events and the AHR improves from 0.747 to 0.732.
+
+**When to suggest this:**
+- NPH power drops > 10 pp from PH power
+- There is a large gap between existing analyses (e.g., 20 months) that could accommodate an additional analysis
+- The endpoint's AHR trajectory shows meaningful improvement over the gap period (check via `gsDesign2::ahr()` at multiple timepoints)
+
+**Implementation:**
+1. Add the endpoint to an existing or new analysis (e.g., test PFS at the OS-triggered IA2)
+2. The endpoint now has 2+ looks and needs a spending function (sfLDOF is a good default — saves most alpha for the later look)
+3. The additional analysis's timing is driven by the triggering endpoint (e.g., OS events), not the NPH endpoint
+4. **Evaluate NPH power at each candidate timing** to ensure the second look is meaningful — PFS events at IA2 and PFS AHR at IA2 are both derived quantities that depend on the IA2 timing
+5. Check that PFS IF at IA1 relative to IA2 is not too high (>95%), which would leave very little alpha for IA2
+
+**Side benefits:**
+- Breaks up a large analysis gap (e.g., 20 months → two ~10-month segments)
+- PH power actually increases (second chance under favorable conditions too)
+- Additional decision point for the trial
+
+### Cross-Endpoint NPH Power as IA Timing Criterion
+
+When an analysis is added specifically for NPH robustness, the timing should be informed by the **NPH endpoint's power**, not just the triggering endpoint's information fraction. When presenting IA2 timing options to the user, always compute and compare the NPH endpoint's:
+- Events at each option
+- AHR at each option (via `gsDesign2::ahr()`)
+- NPH power at each option (via `gs_power_npe()`)
+
+This ensures the timing choice is driven by the actual goal (NPH robustness) rather than just even spacing of the triggering endpoint's analyses.
 
 ---
 
