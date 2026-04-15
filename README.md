@@ -20,16 +20,24 @@ Given a clinical trial scenario, this skill:
 
 ## Supported Design Patterns
 
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| **Single endpoint** | OS, PFS, or DFS with 1-3 interim analyses | Phase 3 NSCLC, OS primary |
-| **Co-primary (alpha split)** | Two endpoints share alpha, bidirectional recycling | PFS + OS, alpha 0.005/0.020 |
-| **Co-primary (fixed-sequence)** | Test one endpoint first, then the other | DFS -> OS gating |
-| **Co-primary (cross-triggers)** | Endpoint timing tied across analyses | PFS triggers IA, OS triggers FA |
-| **Co-primary (single-look)** | One endpoint tested once, the other has multiple looks | PFS single-look at IA, OS at IA+FA |
-| **Multi-population** | Nested subgroups (biomarker+ and ITT) with step-down or alpha-split | PD-L1 subgroup + all patients |
-| **Multi-population + multi-endpoint** | Full graphical multiplicity across populations and endpoints | 4+ hypotheses with complex recycling |
-| **NPH evaluation** | Design under PH, evaluate under delayed/diminishing effect | Immunotherapy with delayed separation |
+**Endpoints:** OS, PFS, DFS, or any time-to-event endpoint
+
+**Populations:** Single population, or nested subgroups (2-3 levels)
+
+**Multiplicity strategies:**
+- Alpha splitting with bidirectional recycling
+- Fixed-sequence (gatekeeping) testing
+- Step-down across populations
+- Full graphical multiplicity (Maurer-Bretz) for any number of hypotheses
+
+**Analysis structures:**
+- Single-look, or 1-3 interim analyses per endpoint
+- Cross-endpoint triggers (one endpoint's events drive another's analysis timing)
+- Mixed: some endpoints tested once, others tested at multiple looks
+
+**Hazard assumptions:**
+- Proportional hazards (primary design basis)
+- Non-proportional hazards evaluation (delayed effect, diminishing effect) as sensitivity analysis
 
 ## Output Structure
 
