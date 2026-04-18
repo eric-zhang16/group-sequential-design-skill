@@ -68,6 +68,15 @@ output/gsd_{disease}_{endpoints}_{YYYYMMDD}/
 
 ## Installation
 
+### Via Plugin Marketplace (recommended)
+
+```bash
+/plugin marketplace add https://github.com/eric-zhang16/Biostatistics-skills.git
+/plugin install group-sequential-design@Biostatistics-skills
+```
+
+### Manual Installation
+
 1. Copy the `group_sequential_design/` folder into your project's `.claude/skills/` directory:
    ```
    your-project/
