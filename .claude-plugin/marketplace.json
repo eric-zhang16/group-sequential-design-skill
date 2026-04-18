@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "km-digitizer",
-      "source": "./km-digitizer",
+      "source": "./",
       "description": "Digitize Kaplan-Meier survival curves from PNG images, reconstruct individual patient-level IPD, and generate Word reports with KM comparison plots, survival statistics, and hazard rate curves.",
       "category": "life-sciences",
       "tags": ["clinical-trials", "survival-analysis", "biostatistics", "kaplan-meier", "ipd"],
@@ -20,7 +20,7 @@
     },
     {
       "name": "group-sequential-design",
-      "source": "./group-sequential-design",
+      "source": "./",
       "description": "Design group sequential clinical trials for survival endpoints with interim analyses, spending functions, multiplicity control, and simulation verification.",
       "category": "life-sciences",
       "tags": ["clinical-trials", "biostatistics", "group-sequential", "survival-analysis", "interim-analysis"],
