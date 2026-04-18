@@ -1,0 +1,31 @@
+{
+  "name": "Biostatistics-skills",
+  "owner": {
+    "name": "Eric Zhang",
+    "email": "zhangp@eikontx.com"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Claude Code skills for biostatistics workflows in clinical development"
+  },
+  "plugins": [
+    {
+      "name": "km-digitizer",
+      "source": "./km-digitizer",
+      "description": "Digitize Kaplan-Meier survival curves from PNG images, reconstruct individual patient-level IPD, and generate Word reports with KM comparison plots, survival statistics, and hazard rate curves.",
+      "category": "life-sciences",
+      "tags": ["clinical-trials", "survival-analysis", "biostatistics", "kaplan-meier", "ipd"],
+      "strict": false,
+      "skills": ["./km-digitizer"]
+    },
+    {
+      "name": "group-sequential-design",
+      "source": "./group-sequential-design",
+      "description": "Design group sequential clinical trials for survival endpoints with interim analyses, spending functions, multiplicity control, and simulation verification.",
+      "category": "life-sciences",
+      "tags": ["clinical-trials", "biostatistics", "group-sequential", "survival-analysis", "interim-analysis"],
+      "strict": false,
+      "skills": ["./group-sequential-design"]
+    }
+  ]
+}
