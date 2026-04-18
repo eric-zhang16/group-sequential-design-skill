@@ -49,17 +49,6 @@ Biostatistics-skills/
 ├── README.md
 ├── group-sequential-design/       # Group sequential trial design skill
 ├── km-digitizer/                  # KM plot digitization and IPD reconstruction skill
-│   ├── SKILL.md                   # Skill instructions and workflow
-│   ├── README.md                  # Skill-specific documentation
-│   ├── scripts/
-│   │   ├── setup_wizard.py        # Interactive GUI to define axis boundaries and calibration points
-│   │   ├── digitize_km.py         # Color-tracks curve pixels and calibrates pixel→data coordinates
-│   │   ├── reconstruct_ipd.R      # Reconstructs individual patient TTE data via IPDfromKM
-│   │   ├── plot_km_hazard.R       # KM comparison and B-spline hazard rate plots
-│   │   ├── survival_stats.R       # Median and survival rates per arm
-│   │   └── generate_report.py     # Assembles Word report from plots and statistics
-│   └── evals/
-│       └── evals.json             # Evaluation scenarios
 └── <future-skill>/                # Additional skills to come
 ```
 
