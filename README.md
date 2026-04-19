@@ -31,7 +31,7 @@ Then install individual skills:
 /plugin install group-sequential-design@Biostatistics-skills
 ```
 
-### Manual Installation
+### Manual Installation (recommended if you want to update skills locally)
 
 1. Clone this repo:
    ```bash
