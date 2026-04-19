@@ -1,30 +1,25 @@
 {
-  "name": "Biostatistics-skills",
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "biostatistics-skills",
+  "description": "Specialized Claude Code plugins for biostatistics workflows in oncology clinical development",
   "owner": {
     "name": "Eric Zhang",
     "email": "pingyezhangusc@gmail.com"
   },
-  "metadata": {
-    "version": "1.0.0",
-    "description": "Claude Code skills for biostatistics workflows in clinical development"
-  },
   "plugins": [
     {
       "name": "km-digitizer",
-      "source": "./km-digitizer",
       "description": "Digitize Kaplan-Meier survival curves from PNG images, reconstruct individual patient-level IPD, and generate Word reports with KM comparison plots, survival statistics, and hazard rate curves.",
       "category": "life-sciences",
-      "tags": ["clinical-trials", "survival-analysis", "biostatistics", "kaplan-meier", "ipd"],
-      "strict": false
+      "source": "./km-digitizer",
+      "homepage": "https://github.com/eric-zhang16/Biostatistics-skills/tree/main/km-digitizer"
     },
     {
       "name": "group-sequential-design",
-      "source": "./",
-      "description": "Design group sequential clinical trials for survival endpoints with interim analyses, spending functions, multiplicity control, and simulation verification.",
+      "description": "Design group sequential clinical trials for survival endpoints (OS, PFS, DFS) with interim analyses, spending functions, boundaries, multiplicity control, and simulation verification.",
       "category": "life-sciences",
-      "tags": ["clinical-trials", "biostatistics", "group-sequential", "survival-analysis", "interim-analysis"],
-      "strict": false,
-      "skills": ["./group-sequential-design"]
+      "source": "./group-sequential-design",
+      "homepage": "https://github.com/eric-zhang16/Biostatistics-skills/tree/main/group-sequential-design"
     }
   ]
 }
