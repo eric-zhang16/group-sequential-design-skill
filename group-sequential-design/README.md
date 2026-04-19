@@ -66,49 +66,6 @@ output/gsd_{disease}_{endpoints}_{YYYYMMDD}/
 ### Python (>= 3.8)
 - [`python-docx`](https://pypi.org/project/python-docx/) — Word report generation
 
-## Installation
-
-### Via Plugin Marketplace (recommended)
-
-```bash
-/plugin marketplace add https://github.com/eric-zhang16/Biostatistics-skills.git
-/plugin install group-sequential-design@Biostatistics-skills
-```
-
-### Manual Installation
-
-1. Copy `group-sequential-design/skills/group-sequential-design/` into your project's `.claude/skills/` directory:
-   ```
-   your-project/
-   └── .claude/
-       └── skills/
-           └── group-sequential-design/
-               ├── SKILL.md
-               ├── reference.md
-               ├── examples.md
-               ├── post_design.md
-               ├── scripts/
-               │   ├── compute_event_prob.R
-               │   └── gsd_report_template.py
-               └── evals/
-                   └── evals.json
-   ```
-
-2. Install the required R packages:
-   ```r
-   install.packages(c("gsDesign", "gsDesign2", "lrstat", "graphicalMCP", "jsonlite"))
-   ```
-
-3. Install the required Python package:
-   ```bash
-   pip install python-docx
-   ```
-
-4. Set the Rscript path in your project's `CLAUDE.md`:
-   ```markdown
-   **Rscript path**: /path/to/Rscript
-   ```
-
 ## Usage
 
 Invoke the skill in Claude Code by either:

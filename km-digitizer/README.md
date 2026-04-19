@@ -43,26 +43,6 @@ PNG image
 | `survival_stats.R` | R | Median and survival rates per arm via `survival::survfit()` |
 | `generate_report.py` | Python | Assembles Word report from R-generated plots and survival statistics table |
 
-## Installation
-
-### Via Plugin Marketplace (recommended)
-
-```bash
-/plugin marketplace add https://github.com/eric-zhang16/Biostatistics-skills.git
-/plugin install km-digitizer@Biostatistics-skills
-```
-
-### Manual Installation
-
-Copy `km-digitizer/skills/km-digitizer/` into your project's `.claude/skills/` directory:
-
-```
-your-project/
-└── .claude/
-    └── skills/
-        └── km-digitizer/
-```
-
 ## Quick Start
 
 ### 1. Set up config
