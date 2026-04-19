@@ -28,10 +28,13 @@ Wait for their answer before proceeding. You need to know the file path and what
 
 ```
 PNG image
-  -> digitize_km.py  -> output/<study>/km_digitized.json   (coordinates)
-  -> reconstruct_ipd.R -> output/<study>/ipd_combined.csv   (patient-level data)
-  -> generate_report.py -> output/<study>/reconstruction_report.docx
+  -> digitize_km.py        -> output/<study>/km_digitized.json    (coordinates)
+  -> reconstruct_ipd.R     -> output/<study>/ipd_combined.csv     (patient-level data)
+  -> verify_reconstruction.R -> output/<study>/verification.json  (PASS/FAIL gate)
+  -> generate_report.py    -> output/<study>/reconstruction_report.docx
 ```
+
+**The verification step is a hard gate: do not proceed to the report if it fails.**
 
 **Scripts** (all in `.claude/skills/km-digitizer/scripts/`):
 
@@ -40,6 +43,7 @@ PNG image
 | `setup_wizard.py` | **Interactive setup** — click axis boundaries + calibration points to generate config.json |
 | `digitize_km.py` | Extract curve coordinates from PNG via color detection + tracking |
 | `reconstruct_ipd.R` | Reverse-engineer individual patient TTE data using `IPDfromKM` |
+| `verify_reconstruction.R` | **Verification** — compare digitized vs reconstructed curves; PASS/FAIL gate |
 | `plot_km_hazard.R` | KM comparison (survfit/ggsurvplot) and hazard rate (bshazard) plots |
 | `survival_stats.R` | Median and survival rates per arm via `survival::survfit()` |
 | `generate_report.py` | Word report assembling R-generated plots and survival stats table |
@@ -150,6 +154,38 @@ Rscript .claude/skills/km-digitizer/scripts/reconstruct_ipd.R \
 Reads the digitized JSON (requires `number_at_risk`), uses `IPDfromKM::getIPD()` to reconstruct individual patient time-to-event data. Outputs:
 - `ipd_<arm_name>.csv` — per-arm IPD (columns: `time`, `event`, `arm`)
 - `ipd_combined.csv` — all arms combined
+
+## Step 4.5: Verify reconstruction quality (mandatory gate)
+
+```bash
+"/c/Program Files/R/R-4.4.1/bin/Rscript.exe" \
+  .claude/skills/km-digitizer/scripts/verify_reconstruction.R \
+  output/<study>/km_digitized.json \
+  output/<study>/ipd_combined.csv \
+  output/<study>/
+```
+
+This compares the digitized curve coordinates against the reconstructed KM curves from the IPD. For each arm it reports:
+
+| Metric | Pass threshold | Meaning |
+|--------|---------------|---------|
+| MAE (mean absolute error) | < 3 percentage points | Average gap across all digitized timepoints |
+| MaxDev (maximum deviation) | < 5 percentage points | Worst-case single-point gap |
+
+**If any arm FAILs, stop and diagnose before proceeding to the report.** Do not generate the Word report on a failed reconstruction — the statistics will be unreliable.
+
+### Diagnosing a FAIL
+
+Work through these in order until verification passes:
+
+1. **Debug overlay** — open `km_debug.png`. Are the colored tracking dots following the correct curve? Crossover or missing dots in the early period indicate a `plot_region` or color-detection problem.
+2. **Add calibration points** — re-read the PNG and transcribe more annotated survival values, especially in the early time period (first 12–24 months) where both curves are close together. Aim for 5+ per arm. Update `config.json` and re-run the digitizer.
+3. **Correct plot_region** — if the debug dots appear shifted in time vs the original plot, the pixel-to-time mapping is off. Re-scan for the exact dark axis line positions and update `plot_region` in `config.json`.
+4. **Check number_at_risk keys** — keys in `number_at_risk.counts` must match `curve_names` exactly (case-sensitive). Mismatches cause the IPD reconstruction to use the wrong N, which widens the gap.
+
+After any config change, re-run Steps 3 → 4 → 4.5 and check verification again.
+
+**Only proceed to Step 5 once verification outputs `Overall: PASS`.**
 
 ## Step 5: Generate report
 

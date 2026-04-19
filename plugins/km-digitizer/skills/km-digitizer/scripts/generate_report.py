@@ -1,4 +1,4 @@
-﻿"""
+"""
 generate_report.py -- Generate Word report comparing original vs reconstructed
 KM curves, with survival statistics and hazard rate plots.
 
