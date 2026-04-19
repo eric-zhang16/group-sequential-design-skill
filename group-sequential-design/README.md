@@ -77,7 +77,7 @@ output/gsd_{disease}_{endpoints}_{YYYYMMDD}/
 
 ### Manual Installation
 
-1. Copy the `group-sequential-design/` folder into your project's `.claude/skills/` directory:
+1. Copy `group-sequential-design/skills/group-sequential-design/` into your project's `.claude/skills/` directory:
    ```
    your-project/
    └── .claude/
@@ -124,13 +124,13 @@ The skill will guide you through the remaining parameters interactively.
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `SKILL.md` | 575 | Main entry point — Q&A workflow, 11-step design process, decision rules |
-| `reference.md` | 1088 | Design guidance, parameter tables, spending functions, alpha recycling rules, failure modes, N-first algorithm |
-| `examples.md` | 1753 | R code examples organized by design pattern |
-| `post_design.md` | 169 | IA timing checks, verification simulation procedure, pass/fail criteria |
-| `scripts/compute_event_prob.R` | — | Event probability computation helper |
-| `scripts/gsd_report_template.py` | — | Template-driven Word report generator |
-| `evals/evals.json` | — | Evaluation scenarios for testing skill correctness |
+| `skills/group-sequential-design/SKILL.md` | 575 | Main entry point — Q&A workflow, 11-step design process, decision rules |
+| `skills/group-sequential-design/reference.md` | 1088 | Design guidance, parameter tables, spending functions, alpha recycling rules, failure modes, N-first algorithm |
+| `skills/group-sequential-design/examples.md` | 1753 | R code examples organized by design pattern |
+| `skills/group-sequential-design/post_design.md` | 169 | IA timing checks, verification simulation procedure, pass/fail criteria |
+| `skills/group-sequential-design/scripts/compute_event_prob.R` | — | Event probability computation helper |
+| `skills/group-sequential-design/scripts/gsd_report_template.py` | — | Template-driven Word report generator |
+| `skills/group-sequential-design/evals/evals.json` | — | Evaluation scenarios for testing skill correctness |
 
 Files are read lazily during execution — only loaded when the workflow reaches the corresponding step.
 

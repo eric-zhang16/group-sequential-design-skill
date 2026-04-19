@@ -56,21 +56,49 @@ Then install individual skills:
 
 ## Repo Structure
 
+This repo is a Claude Code plugin marketplace. Each top-level folder is a **plugin** — a self-contained package containing one skill.
+
 ```
 Biostatistics-skills/
-├── README.md
-├── group-sequential-design/       # Group sequential trial design skill
-├── km-digitizer/                  # KM plot digitization and IPD reconstruction skill
-└── <future-skill>/                # Additional skills to come
+├── .claude-plugin/
+│   └── marketplace.json              # Marketplace index ($schema: anthropic.com/claude-code/marketplace.schema.json)
+├── group-sequential-design/          # Plugin: group sequential trial design
+│   ├── .claude-plugin/
+│   │   └── plugin.json               # Plugin metadata (name, description, author)
+│   ├── skills/
+│   │   └── group-sequential-design/  # Skill content
+│   │       ├── SKILL.md              # Workflow instructions
+│   │       ├── reference.md
+│   │       ├── examples.md
+│   │       ├── post_design.md
+│   │       ├── scripts/
+│   │       └── evals/
+│   ├── LICENSE
+│   └── README.md
+├── km-digitizer/                     # Plugin: KM plot digitization and IPD reconstruction
+│   ├── .claude-plugin/
+│   │   └── plugin.json
+│   ├── skills/
+│   │   └── km-digitizer/             # Skill content
+│   │       ├── SKILL.md
+│   │       ├── scripts/
+│   │       └── evals/
+│   └── README.md
+└── README.md
 ```
 
 ## Contributing
 
-To add a new skill:
+To add a new skill, follow the plugin structure used by this marketplace:
 
-1. Create a folder named after the skill (e.g., `sample-size-reestimation/`)
-2. Include at minimum: `SKILL.md` (instructions), `README.md` (documentation), and `evals/evals.json` (test scenarios)
-3. Follow the existing skill structure as a template
+1. Create a plugin folder named after the skill (e.g., `sample-size-reestimation/`)
+2. Add `.claude-plugin/plugin.json` with `name`, `description`, and `author`
+3. Create `skills/<skill-name>/` containing at minimum:
+   - `SKILL.md` — workflow instructions for Claude
+   - `evals/evals.json` — evaluation scenarios
+4. Add a `README.md` at the plugin root (user-facing docs)
+5. Register the plugin in `.claude-plugin/marketplace.json` under `plugins`
+6. Follow the existing plugin folders as a template
 
 ## License
 
