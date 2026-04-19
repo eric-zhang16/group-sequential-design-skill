@@ -45,9 +45,11 @@ PNG image
 
 ## Quick Start
 
-### 1. Set up config
+### 1. Obtain a KM plot of interest in png format and let AI know where it is
 
-**Option A — Interactive wizard (recommended for new plots):**
+### 2. Set up config
+
+**Option A — Interactive wizard (need manual clicks):**
 ```bash
 python scripts/setup_wizard.py reference/KMPlot/<study>.png output/<study>/
 ```
@@ -55,7 +57,7 @@ The wizard opens a matplotlib window; click the axis boundaries and annotated ca
 
 **Option B — Automated (Claude does this when no display is available):** Claude reads the PNG to extract annotated values, runs a Python/OpenCV scan to find exact axis pixel positions, and writes `config.json` automatically. No user input required.
 
-### 2. Digitize
+### 3. Digitize
 ```bash
 python scripts/digitize_km.py output/<study>/config.json
 ```
@@ -64,67 +66,18 @@ Always inspect the `debug_image` output:
 - **Yellow dots** — tracked pixels for curve 0 (higher survival arm)
 - **Magenta dots** — tracked pixels for curve 1 (lower survival arm)
 
-### 3. Reconstruct IPD
+### 4. Reconstruct IPD
 ```bash
 Rscript scripts/reconstruct_ipd.R output/<study>/km_digitized.json output/<study>/
 ```
 
-### 4. Generate report
+### 5. Generate report
 ```bash
 python scripts/generate_report.py \
   output/<study>/km_digitized.json \
   output/<study>/ipd_combined.csv \
   output/<study>/
 ```
-
-## Config Reference
-
-```json
-{
-    "image_path": "reference/KMPlot/study_os.png",
-    "plot_region": {"left": 219, "top": 98, "right": 1276, "bottom": 518},
-    "x_range": [0, 72],
-    "y_range": [0, 100],
-    "x_label": "Time (months)",
-    "y_label": "OS (%)",
-    "calibration_points": [
-        {"month": 12, "survival": 69.8, "curve": 0},
-        {"month": 24, "survival": 45.7, "curve": 0},
-        {"month": 36, "survival": 31.3, "curve": 0},
-        {"month": 48, "survival": 23.6, "curve": 0},
-        {"month": 60, "survival": 19.4, "curve": 0},
-        {"month": 12, "survival": 48.0, "curve": 1},
-        {"month": 24, "survival": 27.3, "curve": 1},
-        {"month": 36, "survival": 17.4, "curve": 1},
-        {"month": 48, "survival": 13.8, "curve": 1},
-        {"month": 60, "survival": 11.3, "curve": 1}
-    ],
-    "number_at_risk": {
-        "times": [0, 12, 24, 36, 48, 60, 72],
-        "counts": {
-            "Treatment arm": [410, 283, 184, 126, 95, 77, 0],
-            "Control arm":   [206,  98,  55,  34, 27, 22, 0]
-        }
-    },
-    "curve_names": ["Treatment arm", "Control arm"],
-    "output_path": "output/study_os/km_digitized.json",
-    "debug_image": "output/study_os/km_debug.png",
-    "y_tolerance": 1.5
-}
-```
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `image_path` | Yes | Path to the KM plot PNG |
-| `plot_region` | Yes | Pixel coordinates of the data area. Use the wizard or scan programmatically for dark axis lines — never visually estimate (causes systematic time shifts) |
-| `x_range` | Yes | Data-space X-axis limits, e.g. `[0, 72]` |
-| `y_range` | Yes | Data-space Y-axis limits, e.g. `[0, 100]` |
-| `calibration_points` | Recommended | Known (month, survival%) pairs. `curve`: 0 = top arm, 1 = bottom arm. **Collect ALL labeled timepoints from BOTH curves** — not just 2. More points = better accuracy, especially in the early overlap zone |
-| `number_at_risk` | For IPD | NaR table matching curve names. Required for `reconstruct_ipd.R` and for tail truncation |
-| `curve_names` | Optional | Labels in survival-rank order (highest first). Must match `number_at_risk.counts` keys |
-| `output_path` | Yes | Destination for digitized JSON |
-| `debug_image` | Recommended | Destination for debug overlay PNG |
-| `y_tolerance` | Optional | Min survival % change to register as a step (default: 1.0) |
 
 ## Report Contents
 
