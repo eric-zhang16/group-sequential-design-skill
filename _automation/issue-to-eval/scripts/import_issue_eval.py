@@ -33,7 +33,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def clean_value(val: str) -> str:
     if not val:
         return ""
-    return re.sub(r"^[\s\-\*•]+", "", val.strip()).strip()
+    val = re.sub(r"<!--.*?-->", "", val, flags=re.DOTALL)  # strip HTML comments
+    val = re.sub(r"^[\s\-\*•]+", "", val.strip()).strip()
+    return val
 
 
 def parse_issue_markdown(body: str) -> dict:

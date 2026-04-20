@@ -9,6 +9,9 @@ on:
         description: 'Specific issue number to import (leave blank to sync all)'
         required: false
 
+permissions:
+  contents: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest

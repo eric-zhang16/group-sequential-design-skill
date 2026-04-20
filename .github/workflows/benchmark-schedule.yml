@@ -19,6 +19,9 @@ on:
         description: 'Specific eval ID to run (e.g. github-issue-3)'
         required: false
 
+permissions:
+  contents: write
+
 jobs:
   benchmark:
     runs-on: ubuntu-latest

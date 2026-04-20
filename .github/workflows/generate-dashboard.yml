@@ -7,6 +7,9 @@ on:
       - '_automation/benchmark-runner/runs/runs.json'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   dashboard:
     runs-on: ubuntu-latest
