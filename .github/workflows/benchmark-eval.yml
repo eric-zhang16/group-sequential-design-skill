@@ -2,9 +2,57 @@ name: Scheduled Benchmarks
 
 on:
   workflow_dispatch:
+    inputs:
+      priority_skill:
+        description: 'Skill to prioritize (e.g. km-digitizer)'
+        required: false
+        default: ''
+      priority_issue:
+        description: 'Specific eval ID (e.g. github-issue-3)'
+        required: false
+        default: ''
+      model:
+        description: 'Claude model ID'
+        required: false
+        default: 'claude-sonnet-4-6'
+
+permissions:
+  contents: write
+  issues: write
 
 jobs:
-  test:
+  benchmark:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
-      - run: echo hello
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Run benchmark
+        run: |
+          MODEL="${{ github.event.inputs.model || 'claude-sonnet-4-6' }}"
+          ARGS=""
+          [ -n "${{ github.event.inputs.priority_skill }}" ] && ARGS="$ARGS --priority-skill ${{ github.event.inputs.priority_skill }}"
+          [ -n "${{ github.event.inputs.priority_issue }}" ] && ARGS="$ARGS --priority-issue ${{ github.event.inputs.priority_issue }}"
+          python3 _automation/benchmark-runner/scripts/run_benchmark.py --model "$MODEL" $ARGS
+
+      - name: Commit benchmark runs
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "eval: benchmark run result [skip ci]"
+          file_pattern: "_automation/benchmark-runner/runs/runs.json"
