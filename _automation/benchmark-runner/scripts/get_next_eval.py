@@ -233,6 +233,10 @@ def main() -> None:
                 if args.priority_issue and str(eval_id) == args.priority_issue:
                     break
 
+        # If priority flags are set and we already have a candidate, stop scanning more skills
+        if eligible_evals and (args.priority_skill or args.priority_issue):
+            break
+
     if not eligible_evals:
         print("STATUS: UP_TO_DATE")
         return
@@ -243,13 +247,17 @@ def main() -> None:
         match = re.search(r"(\d+)$", str(eval_id))
         return int(match.group(1)) if match else 0
 
-    selected_eval = min(
-        eligible_evals,
-        key=lambda e: (
-            abs((get_issue_num(e["id"]) % 10) - today_last_digit),
-            get_issue_num(e["id"])
+    if args.priority_skill or args.priority_issue:
+        # Priority flags were given — respect iteration order (first eligible wins)
+        selected_eval = eligible_evals[0]
+    else:
+        selected_eval = min(
+            eligible_evals,
+            key=lambda e: (
+                abs((get_issue_num(e["id"]) % 10) - today_last_digit),
+                get_issue_num(e["id"])
+            )
         )
-    )
 
     write_run_manifest(selected_eval, args.model, selected_eval["_skill_sha"], "dispatched")
     print(json.dumps(selected_eval, indent=2))
