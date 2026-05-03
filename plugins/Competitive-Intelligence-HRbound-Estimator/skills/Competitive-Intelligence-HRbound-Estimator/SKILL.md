@@ -97,13 +97,23 @@ Record:
 
 ## Computation
 
-Create output directory `output/hr-bound-estimator_<YYYYMMDD>/`, write input JSON, run script:
+Create output directory `output/hr-bound-estimator_<YYYYMMDD>/`, write input JSON, run script.
+
+The script is at `<skill_base_dir>/scripts/compute_hr_bounds.R` where `<skill_base_dir>` is the
+base directory shown in the skill context when this skill loads.
+
+Locate `Rscript` for the current platform, then run:
 
 ```bash
-"/c/Program Files/R/R-4.4.1/bin/Rscript.exe" \
-  ".claude/skills/Competitive-Intelligence-HRbound-Estimator/scripts/compute_hr_bounds.R" \
-  "<path_to_input.json>"
+# Auto-detect Rscript across platforms
+RSCRIPT=$(command -v Rscript 2>/dev/null || \
+  ls "/c/Program Files/R/R-"*/bin/Rscript.exe 2>/dev/null | sort -V | tail -1)
+
+"$RSCRIPT" "<skill_base_dir>/scripts/compute_hr_bounds.R" "<path_to_input.json>"
 ```
+
+On Windows the glob will find the newest R version automatically. On macOS/Linux `Rscript` is
+normally on PATH. If neither works, ask the user for their Rscript path.
 
 Input JSON — Option A (single alpha):
 ```json
